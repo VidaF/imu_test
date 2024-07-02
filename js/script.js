@@ -24,7 +24,8 @@ let quaternion = [1, 0, 0, 0];
 let calibration = [0, 0, 0, 0];
 
 const maxLogLength = 100;
-const baudRates = [300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 74880, 115200, 230400, 250000, 500000, 1000000, 2000000];
+/*const baudRates = [300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 74880, 115200, 230400, 250000, 500000, 1000000, 2000000];*/
+const baudRates = [300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 74880, 115200, 230400];
 const log = document.getElementById('log');
 const butConnect = document.getElementById('butConnect');
 const butClear = document.getElementById('butClear');
