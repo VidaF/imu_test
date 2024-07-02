@@ -424,7 +424,17 @@ scene.background = new THREE.Color('black');
   scene.add(light);
   scene.add(light.target);
 }
-
+let bunny1,bunny2;
+{
+  const objLoader = new OBJLoader();
+   objLoader.load('assets/bunny.obj', (root) => {
+    bunny1 = root.clone();
+   scene.add(bunny1);
+     bunny2 = root.clone();
+  scene.add(bunny2);
+});
+}
+/*Vida
 {
   const objLoader = new OBJLoader();
   objLoader.load('assets/bunny.obj', (root) => {
@@ -432,7 +442,7 @@ scene.background = new THREE.Color('black');
     scene.add(root);
   });
 }
-
+*/
 function resizeRendererToDisplaySize(renderer) {
   const canvas = renderer.domElement;
   const width = canvas.clientWidth;
