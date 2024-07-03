@@ -428,12 +428,23 @@ scene.background = new THREE.Color('black');
 let bunny1,bunny2;
 {
   const objLoader = new OBJLoader();
+  objLoader.load('assets/bunny.obj', (root) => {
+  bunny1 = root.clone();
+  bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
+  scene.add(bunny1);
+  
+  bunny2 = root.clone();
+  bunny2.position.set(-15, 0, 0); // Set bunny2 to the left
+  scene.add(bunny2);
+});
+  /*
+  const objLoader = new OBJLoader();
    objLoader.load('assets/bunny.obj', (root) => {
     bunny1 = root.clone();
    scene.add(bunny1);
      bunny2 = root.clone();
   scene.add(bunny2);
-});
+});*/
 }
 /*Vida
 {
