@@ -398,8 +398,103 @@ function updateCalibration() {
 function saveSetting(setting, value) {
   window.localStorage.setItem(setting, JSON.stringify(value));
 }
+let bunny1, bunny2;
 
-let bunny;
+const renderer = new THREE.WebGLRenderer({canvas});
+
+const camera = new THREE.PerspectiveCamera(45, canvas.width/canvas.height, 0.1, 100);
+camera.position.set(0, 0, 30);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('black');
+
+{
+  const skyColor = 0xB1E1FF;  // light blue
+  const groundColor = 0x666666;  // black
+  const intensity = 0.5;
+  const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+  scene.add(light);
+}
+
+{
+  const color = 0xFFFFFF;
+  const intensity = 1;
+  const light = new THREE.DirectionalLight(color, intensity);
+  light.position.set(0, 10, 0);
+  light.target.position.set(-5, 0, 0);
+  scene.add(light);
+  scene.add(light.target);
+}
+
+{
+  const objLoader = new OBJLoader();
+  objLoader.load('assets/bunny.obj', (root) => {
+    bunny1 = root.clone();
+    bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
+    scene.add(bunny1);
+
+    bunny2 = root.clone();
+    bunny2.position.set(15, 0, 0); // Set bunny2 to the right
+    scene.add(bunny2);
+  });
+}
+
+function resizeRendererToDisplaySize(renderer) {
+  const canvas = renderer.domElement;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  const needResize = canvas.width !== width || canvas.height !== height;
+  if (needResize) {
+    renderer.setSize(width, height, false);
+  }
+  return needResize;
+}
+
+async function render() {
+  if (resizeRendererToDisplaySize(renderer)) {
+    const canvas = renderer.domElement;
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.updateProjectionMatrix();
+  }
+
+  // Ensure bunny1 and bunny2 are defined before attempting to set their rotation
+  if (bunny1 && bunny2) {
+    if (angleType.value == "euler") {
+      if (showCalibration) {
+        // BNO055
+        let rotationEuler = new THREE.Euler(
+          THREE.MathUtils.degToRad(360 - orientation[2]),
+          THREE.MathUtils.degToRad(orientation[0]),
+          THREE.MathUtils.degToRad(orientation[1]),
+          'YZX'
+        );
+        bunny1.setRotationFromEuler(rotationEuler);
+        bunny2.setRotationFromEuler(rotationEuler);
+      } else {
+        let rotationEuler = new THREE.Euler(
+          THREE.MathUtils.degToRad(orientation[2]),
+          THREE.MathUtils.degToRad(orientation[0] - 180),
+          THREE.MathUtils.degToRad(-orientation[1]),
+          'YZX'
+        );
+        bunny1.setRotationFromEuler(rotationEuler);
+        bunny2.setRotationFromEuler(rotationEuler);
+      }
+    } else {
+      let rotationQuaternion = new THREE.Quaternion(quaternion[1], quaternion[3], -quaternion[2], quaternion[0]);
+      bunny1.setRotationFromQuaternion(rotationQuaternion);
+      bunny2.setRotationFromQuaternion(rotationQuaternion);
+    }
+  }
+
+  renderer.render(scene, camera);
+  updateCalibration();
+  await sleep(10); // Allow 10ms for UI updates
+  await finishDrawing();
+  await render();
+}
+/*
+//let bunny;
 
 const renderer = new THREE.WebGLRenderer({canvas});
 
@@ -437,6 +532,7 @@ let bunny1,bunny2;
   bunny2.position.set(15, 0, 0); // Set bunny2 to the left
   scene.add(bunny2);
 });
+}
   /*
   const objLoader = new OBJLoader();
    objLoader.load('assets/bunny.obj', (root) => {
@@ -444,8 +540,8 @@ let bunny1,bunny2;
    scene.add(bunny1);
      bunny2 = root.clone();
   scene.add(bunny2);
-});*/
-}
+});
+*/
 /*Vida
 {
   const objLoader = new OBJLoader();
@@ -455,6 +551,7 @@ let bunny1,bunny2;
   });
 }
 */
+/*
 function resizeRendererToDisplaySize(renderer) {
   const canvas = renderer.domElement;
   const width = canvas.clientWidth;
@@ -505,3 +602,4 @@ async function render() {
   await finishDrawing();
   await render();
 }
+*/
