@@ -434,7 +434,7 @@ let bunny1,bunny2;
   scene.add(bunny1);
   
   bunny2 = root.clone();
-  bunny2.position.set(-15, 0, 0); // Set bunny2 to the left
+  //bunny2.position.set(-15, 0, 0); // Set bunny2 to the left
   scene.add(bunny2);
 });
   /*
