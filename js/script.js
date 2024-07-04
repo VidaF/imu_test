@@ -439,6 +439,160 @@ scene.background = new THREE.Color('black');
   });
 }
 
+let orientation1 = [0, 0, 0];
+let quaternion1 = [1, 0, 0, 0];
+let orientation2 = [0, 0, 0];
+let quaternion2 = [1, 0, 0, 0];
+
+function resizeRendererToDisplaySize(renderer) {
+  const canvas = renderer.domElement;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  const needResize = canvas.width !== width || canvas.height !== height;
+  if (needResize) {
+    renderer.setSize(width, height, false);
+  }
+  return needResize;
+}
+
+async function readLoop() {
+  while (true) {
+    const {value, done} = await reader.read();
+    if (value) {
+      let sensorType, sensorData;
+      if (value.startsWith("Sensor 1 Orientation:")) {
+        sensorType = 1;
+        sensorData = value.substr(21).trim().split(",").map(x => +x);
+        orientation1 = sensorData;
+      } else if (value.startsWith("Sensor 2 Orientation:")) {
+        sensorType = 2;
+        sensorData = value.substr(21).trim().split(",").map(x => +x);
+        orientation2 = sensorData;
+      } else if (value.startsWith("Sensor 1 Quaternion:")) {
+        sensorType = 1;
+        sensorData = value.substr(20).trim().split(",").map(x => +x);
+        quaternion1 = sensorData;
+      } else if (value.startsWith("Sensor 2 Quaternion:")) {
+        sensorType = 2;
+        sensorData = value.substr(20).trim().split(",").map(x => +x);
+        quaternion2 = sensorData;
+      }
+    }
+    if (done) {
+      console.log('[readLoop] DONE', done);
+      reader.releaseLock();
+      break;
+    }
+  }
+}
+
+async function render() {
+  if (resizeRendererToDisplaySize(renderer)) {
+    const canvas = renderer.domElement;
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.updateProjectionMatrix();
+  }
+
+  // Ensure bunny1 and bunny2 are defined before attempting to set their rotation
+  if (bunny1 && bunny2) {
+    if (angleType.value == "euler") {
+      if (showCalibration) {
+        // Sensor 1
+        let rotationEuler1 = new THREE.Euler(
+          THREE.MathUtils.degToRad(360 - orientation1[2]),
+          THREE.MathUtils.degToRad(orientation1[0]),
+          THREE.MathUtils.degToRad(orientation1[1]),
+          'YZX'
+        );
+        bunny1.setRotationFromEuler(rotationEuler1);
+
+        // Sensor 2
+        let rotationEuler2 = new THREE.Euler(
+          THREE.MathUtils.degToRad(360 - orientation2[2]),
+          THREE.MathUtils.degToRad(orientation2[0]),
+          THREE.MathUtils.degToRad(orientation2[1]),
+          'YZX'
+        );
+        bunny2.setRotationFromEuler(rotationEuler2);
+      } else {
+        // Sensor 1
+        let rotationEuler1 = new THREE.Euler(
+          THREE.MathUtils.degToRad(orientation1[2]),
+          THREE.MathUtils.degToRad(orientation1[0] - 180),
+          THREE.MathUtils.degToRad(-orientation1[1]),
+          'YZX'
+        );
+        bunny1.setRotationFromEuler(rotationEuler1);
+
+        // Sensor 2
+        let rotationEuler2 = new THREE.Euler(
+          THREE.MathUtils.degToRad(orientation2[2]),
+          THREE.MathUtils.degToRad(orientation2[0] - 180),
+          THREE.MathUtils.degToRad(-orientation2[1]),
+          'YZX'
+        );
+        bunny2.setRotationFromEuler(rotationEuler2);
+      }
+    } else {
+      // Sensor 1
+      let rotationQuaternion1 = new THREE.Quaternion(quaternion1[1], quaternion1[3], -quaternion1[2], quaternion1[0]);
+      bunny1.setRotationFromQuaternion(rotationQuaternion1);
+
+      // Sensor 2
+      let rotationQuaternion2 = new THREE.Quaternion(quaternion2[1], quaternion2[3], -quaternion2[2], quaternion2[0]);
+      bunny2.setRotationFromQuaternion(rotationQuaternion2);
+    }
+  }
+
+  renderer.render(scene, camera);
+  updateCalibration();
+  await sleep(10); // Allow 10ms for UI updates
+  await finishDrawing();
+  await render();
+}
+
+/*
+let bunny1, bunny2;
+
+const renderer = new THREE.WebGLRenderer({canvas});
+
+const camera = new THREE.PerspectiveCamera(45, canvas.width/canvas.height, 0.1, 100);
+camera.position.set(0, 0, 30);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('black');
+
+{
+  const skyColor = 0xB1E1FF;  // light blue
+  const groundColor = 0x666666;  // black
+  const intensity = 0.5;
+  const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+  scene.add(light);
+}
+
+{
+  const color = 0xFFFFFF;
+  const intensity = 1;
+  const light = new THREE.DirectionalLight(color, intensity);
+  light.position.set(0, 10, 0);
+  light.target.position.set(-5, 0, 0);
+  scene.add(light);
+  scene.add(light.target);
+}
+
+{
+  const objLoader = new OBJLoader();
+  objLoader.load('assets/bunny.obj', (root) => {
+    bunny1 = root.clone();
+    bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
+    scene.add(bunny1);
+
+    bunny2 = root.clone();
+    bunny2.position.set(15, 0, 0); // Set bunny2 to the right
+    scene.add(bunny2);
+  });
+}
+
 function resizeRendererToDisplaySize(renderer) {
   const canvas = renderer.domElement;
   const width = canvas.clientWidth;
