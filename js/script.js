@@ -75,6 +75,44 @@ function isWebGLAvailable() {
   }
 }
 
+const renderer = new THREE.WebGLRenderer({ canvas: canvas });
+const camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 0.1, 100);
+camera.position.set(0, 0, 30);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('black');
+
+{
+  const skyColor = 0xB1E1FF;  // light blue
+  const groundColor = 0x666666;  // black
+  const intensity = 0.5;
+  const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+  scene.add(light);
+}
+
+{
+  const color = 0xFFFFFF;
+  const intensity = 1;
+  const light = new THREE.DirectionalLight(color, intensity);
+  light.position.set(0, 10, 0);
+  light.target.position.set(-5, 0, 0);
+  scene.add(light);
+  scene.add(light.target);
+}
+
+{
+  const objLoader = new OBJLoader();
+  objLoader.load('assets/bunny.obj', (root) => {
+    bunny1 = root.clone();
+    bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
+    scene.add(bunny1);
+
+    bunny2 = root.clone();
+    bunny2.position.set(15, 0, 0); // Set bunny2 to the right
+    scene.add(bunny2);
+  });
+}
+
 async function connect() {
   // - Request a port and open a connection.
   port = await navigator.serial.requestPort();
