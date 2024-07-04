@@ -584,7 +584,6 @@ function updateCalibration() {
   }
 }
 
-/*
 let bunny1, bunny2;
 
 const renderer = new THREE.WebGLRenderer({canvas});
@@ -646,23 +645,14 @@ async function readLoop() {
   while (true) {
     const {value, done} = await reader.read();
     if (value) {
-      let sensorType, sensorData;
       if (value.startsWith("Sensor 1 Orientation:")) {
-        sensorType = 1;
-        sensorData = value.substr(21).trim().split(",").map(x => +x);
-        orientation1 = sensorData;
+        orientation1 = value.substr(21).trim().split(",").map(x => +x);
       } else if (value.startsWith("Sensor 2 Orientation:")) {
-        sensorType = 2;
-        sensorData = value.substr(21).trim().split(",").map(x => +x);
-        orientation2 = sensorData;
+        orientation2 = value.substr(21).trim().split(",").map(x => +x);
       } else if (value.startsWith("Sensor 1 Quaternion:")) {
-        sensorType = 1;
-        sensorData = value.substr(20).trim().split(",").map(x => +x);
-        quaternion1 = sensorData;
+        quaternion1 = value.substr(20).trim().split(",").map(x => +x);
       } else if (value.startsWith("Sensor 2 Quaternion:")) {
-        sensorType = 2;
-        sensorData = value.substr(20).trim().split(",").map(x => +x);
-        quaternion2 = sensorData;
+        quaternion2 = value.substr(20).trim().split(",").map(x => +x);
       }
     }
     if (done) {
@@ -680,46 +670,25 @@ async function render() {
     camera.updateProjectionMatrix();
   }
 
-  // Ensure bunny1 and bunny2 are defined before attempting to set their rotation
   if (bunny1 && bunny2) {
     if (angleType.value == "euler") {
-      if (showCalibration) {
-        // Sensor 1
-        let rotationEuler1 = new THREE.Euler(
-          THREE.MathUtils.degToRad(360 - orientation1[2]),
-          THREE.MathUtils.degToRad(orientation1[0]),
-          THREE.MathUtils.degToRad(orientation1[1]),
-          'YZX'
-        );
-        bunny1.setRotationFromEuler(rotationEuler1);
+      // Sensor 1
+      let rotationEuler1 = new THREE.Euler(
+        THREE.MathUtils.degToRad(360 - orientation1[2]),
+        THREE.MathUtils.degToRad(orientation1[0]),
+        THREE.MathUtils.degToRad(orientation1[1]),
+        'YZX'
+      );
+      bunny1.setRotationFromEuler(rotationEuler1);
 
-        // Sensor 2
-        let rotationEuler2 = new THREE.Euler(
-          THREE.MathUtils.degToRad(360 - orientation2[2]),
-          THREE.MathUtils.degToRad(orientation2[0]),
-          THREE.MathUtils.degToRad(orientation2[1]),
-          'YZX'
-        );
-        bunny2.setRotationFromEuler(rotationEuler2);
-      } else {
-        // Sensor 1
-        let rotationEuler1 = new THREE.Euler(
-          THREE.MathUtils.degToRad(orientation1[2]),
-          THREE.MathUtils.degToRad(orientation1[0] - 180),
-          THREE.MathUtils.degToRad(-orientation1[1]),
-          'YZX'
-        );
-        bunny1.setRotationFromEuler(rotationEuler1);
-
-        // Sensor 2
-        let rotationEuler2 = new THREE.Euler(
-          THREE.MathUtils.degToRad(orientation2[2]),
-          THREE.MathUtils.degToRad(orientation2[0] - 180),
-          THREE.MathUtils.degToRad(-orientation2[1]),
-          'YZX'
-        );
-        bunny2.setRotationFromEuler(rotationEuler2);
-      }
+      // Sensor 2
+      let rotationEuler2 = new THREE.Euler(
+        THREE.MathUtils.degToRad(360 - orientation2[2]),
+        THREE.MathUtils.degToRad(orientation2[0]),
+        THREE.MathUtils.degToRad(orientation2[1]),
+        'YZX'
+      );
+      bunny2.setRotationFromEuler(rotationEuler2);
     } else {
       // Sensor 1
       let rotationQuaternion1 = new THREE.Quaternion(quaternion1[1], quaternion1[3], -quaternion1[2], quaternion1[0]);
@@ -732,215 +701,63 @@ async function render() {
   }
 
   renderer.render(scene, camera);
-  updateCalibration();
-  await sleep(10); // Allow 10ms for UI updates
   await finishDrawing();
-  await render();
+  requestAnimationFrame(render);
 }
 
-/*
-let bunny1, bunny2;
-
-const renderer = new THREE.WebGLRenderer({canvas});
-
-const camera = new THREE.PerspectiveCamera(45, canvas.width/canvas.height, 0.1, 100);
-camera.position.set(0, 0, 30);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('black');
-
-{
-  const skyColor = 0xB1E1FF;  // light blue
-  const groundColor = 0x666666;  // black
-  const intensity = 0.5;
-  const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
-  scene.add(light);
-}
-
-{
-  const color = 0xFFFFFF;
-  const intensity = 1;
-  const light = new THREE.DirectionalLight(color, intensity);
-  light.position.set(0, 10, 0);
-  light.target.position.set(-5, 0, 0);
-  scene.add(light);
-  scene.add(light.target);
-}
-
-{
-  const objLoader = new OBJLoader();
-  objLoader.load('assets/bunny.obj', (root) => {
-    bunny1 = root.clone();
-    bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
-    scene.add(bunny1);
-
-    bunny2 = root.clone();
-    bunny2.position.set(15, 0, 0); // Set bunny2 to the right
-    scene.add(bunny2);
-  });
-}
-
-function resizeRendererToDisplaySize(renderer) {
-  const canvas = renderer.domElement;
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  const needResize = canvas.width !== width || canvas.height !== height;
-  if (needResize) {
-    renderer.setSize(width, height, false);
-  }
-  return needResize;
-}
-
-async function render() {
-  if (resizeRendererToDisplaySize(renderer)) {
-    const canvas = renderer.domElement;
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!('serial' in navigator)) {
+    alert('Sorry, Web Serial is not supported on this device. Make sure you\'re running Chrome 78 or later and have enabled the #enable-experimental-web-platform-features flag in chrome://flags');
+    return;
   }
 
-  // Ensure bunny1 and bunny2 are defined before attempting to set their rotation
-  if (bunny1 && bunny2) {
-    if (angleType.value == "euler") {
-      if (showCalibration) {
-        // BNO055
-        let rotationEuler = new THREE.Euler(
-          THREE.MathUtils.degToRad(360 - orientation[2]),
-          THREE.MathUtils.degToRad(orientation[0]),
-          THREE.MathUtils.degToRad(orientation[1]),
-          'YZX'
-        );
-        bunny1.setRotationFromEuler(rotationEuler);
-        bunny2.setRotationFromEuler(rotationEuler);
-      } else {
-        let rotationEuler = new THREE.Euler(
-          THREE.MathUtils.degToRad(orientation[2]),
-          THREE.MathUtils.degToRad(orientation[0] - 180),
-          THREE.MathUtils.degToRad(-orientation[1]),
-          'YZX'
-        );
-        bunny1.setRotationFromEuler(rotationEuler);
-        bunny2.setRotationFromEuler(rotationEuler);
-      }
-    } else {
-      let rotationQuaternion = new THREE.Quaternion(quaternion[1], quaternion[3], -quaternion[2], quaternion[0]);
-      bunny1.setRotationFromQuaternion(rotationQuaternion);
-      bunny2.setRotationFromQuaternion(rotationQuaternion);
-    }
+  if (!isWebGLAvailable()) {
+    alert('Sorry, WebGL is not supported on this device.');
+    return;
   }
 
-  renderer.render(scene, camera);
-  updateCalibration();
-  await sleep(10); // Allow 10ms for UI updates
+  butConnect.addEventListener('click', clickConnect);
+  butClear.addEventListener('click', clickClear);
+  autoscroll.addEventListener('click', clickAutoscroll);
+  showTimestamp.addEventListener('click', clickTimestamp);
+  baudRate.addEventListener('change', changeBaudRate);
+  angleType.addEventListener('change', changeAngleType);
+  darkMode.addEventListener('click', clickDarkMode);
+
+  initBaudRate();
+  loadAllSettings();
+  updateTheme();
   await finishDrawing();
-  await render();
-}
-/*
-//let bunny;
-
-const renderer = new THREE.WebGLRenderer({canvas});
-
-const camera = new THREE.PerspectiveCamera(45, canvas.width/canvas.height, 0.1, 100);
-camera.position.set(0, 0, 30);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('black');
-{
-  const skyColor = 0xB1E1FF;  // light blue
-  const groundColor = 0x666666;  // black
-  const intensity = 0.5;
-  const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
-  scene.add(light);
-}
-
-{
-  const color = 0xFFFFFF;
-  const intensity = 1;
-  const light = new THREE.DirectionalLight(color, intensity);
-  light.position.set(0, 10, 0);
-  light.target.position.set(-5, 0, 0);
-  scene.add(light);
-  scene.add(light.target);
-}
-let bunny1,bunny2;
-{
-  const objLoader = new OBJLoader();
-  objLoader.load('assets/bunny.obj', (root) => {
-  bunny1 = root.clone();
-  bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
-  scene.add(bunny1);
-  
-  bunny2 = root.clone();
-  bunny2.position.set(15, 0, 0); // Set bunny2 to the left
-  scene.add(bunny2);
+  requestAnimationFrame(render);
 });
-}
-  /*
-  const objLoader = new OBJLoader();
-   objLoader.load('assets/bunny.obj', (root) => {
-    bunny1 = root.clone();
-   scene.add(bunny1);
-     bunny2 = root.clone();
-  scene.add(bunny2);
-});
-*/
-/*Vida
-{
-  const objLoader = new OBJLoader();
-  objLoader.load('assets/bunny.obj', (root) => {
-    bunny = root;
-    scene.add(root);
-  });
-}
-*/
-/*
-function resizeRendererToDisplaySize(renderer) {
-  const canvas = renderer.domElement;
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  const needResize = canvas.width !== width || canvas.height !== height;
-  if (needResize) {
-    renderer.setSize(width, height, false);
+
+function isWebGLAvailable() {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+  } catch (e) {
+    return false;
   }
-  return needResize;
 }
 
-async function render() {
-  if (resizeRendererToDisplaySize(renderer)) {
-    const canvas = renderer.domElement;
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
-  }
+function updateCalibration() {
+  // Update the Calibration Container with the values from calibration
+  const calMap = [
+    {caption: "Uncalibrated",         color: "#CC0000"},
+    {caption: "Partially Calibrated", color: "#FF6600"},
+    {caption: "Mostly Calibrated",    color: "#FFCC00"},
+    {caption: "Fully Calibrated",     color: "#009900"},
+  ];
+  const calLabels = [
+    "System", "Gyro", "Accelerometer", "Magnetometer"
+  ];
 
-  if (bunny != undefined) {
-    if (angleType.value == "euler") {
-      if (showCalibration) {
-          // BNO055
-        let rotationEuler = new THREE.Euler(
-          THREE.MathUtils.degToRad(360 - orientation[2]),
-          THREE.MathUtils.degToRad(orientation[0]),
-          THREE.MathUtils.degToRad(orientation[1]),
-          'YZX'
-        );
-        bunny.setRotationFromEuler(rotationEuler);
-      } else {
-        let rotationEuler = new THREE.Euler(
-          THREE.MathUtils.degToRad(orientation[2]),
-          THREE.MathUtils.degToRad(orientation[0]-180),
-          THREE.MathUtils.degToRad(-orientation[1]),
-          'YZX'
-        );
-        bunny.setRotationFromEuler(rotationEuler);
-      }
-    } else {
-      let rotationQuaternion = new THREE.Quaternion(quaternion[1], quaternion[3], -quaternion[2], quaternion[0]);
-      bunny.setRotationFromQuaternion(rotationQuaternion);
-    }
+  calContainer.innerHTML = "";
+  for (let i = 0; i < calibration.length; i++) {
+    const calInfo = calMap[calibration[i]];
+    const element = document.createElement("div");
+    element.innerHTML = calLabels[i] + ": " + calInfo.caption;
+    element.style = "color: " + calInfo.color;
+    calContainer.appendChild(element);
   }
-
-  renderer.render(scene, camera);
-  updateCalibration();
-  await sleep(10); // Allow 10ms for UI updates
-  await finishDrawing();
-  await render();
 }
-*/
