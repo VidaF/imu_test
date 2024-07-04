@@ -459,6 +459,193 @@ async function readLoop() {
   while (true) {
     const {value, done} = await reader.read();
     if (value) {
+      if (value.startsWith("Sensor 1 Orientation:")) {
+        orientation1 = value.substr(21).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 2 Orientation:")) {
+        orientation2 = value.substr(21).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 1 Quaternion:")) {
+        quaternion1 = value.substr(20).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 2 Quaternion:")) {
+        quaternion2 = value.substr(20).trim().split(",").map(x => +x);
+      }
+    }
+    if (done) {
+      console.log('[readLoop] DONE', done);
+      reader.releaseLock();
+      break;
+    }
+  }
+}
+
+async function render() {
+  if (resizeRendererToDisplaySize(renderer)) {
+    const canvas = renderer.domElement;
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.updateProjectionMatrix();
+  }
+
+  if (bunny1 && bunny2) {
+    if (angleType.value == "euler") {
+      // Sensor 1
+      let rotationEuler1 = new THREE.Euler(
+        THREE.MathUtils.degToRad(360 - orientation1[2]),
+        THREE.MathUtils.degToRad(orientation1[0]),
+        THREE.MathUtils.degToRad(orientation1[1]),
+        'YZX'
+      );
+      bunny1.setRotationFromEuler(rotationEuler1);
+
+      // Sensor 2
+      let rotationEuler2 = new THREE.Euler(
+        THREE.MathUtils.degToRad(360 - orientation2[2]),
+        THREE.MathUtils.degToRad(orientation2[0]),
+        THREE.MathUtils.degToRad(orientation2[1]),
+        'YZX'
+      );
+      bunny2.setRotationFromEuler(rotationEuler2);
+    } else {
+      // Sensor 1
+      let rotationQuaternion1 = new THREE.Quaternion(quaternion1[1], quaternion1[3], -quaternion1[2], quaternion1[0]);
+      bunny1.setRotationFromQuaternion(rotationQuaternion1);
+
+      // Sensor 2
+      let rotationQuaternion2 = new THREE.Quaternion(quaternion2[1], quaternion2[3], -quaternion2[2], quaternion2[0]);
+      bunny2.setRotationFromQuaternion(rotationQuaternion2);
+    }
+  }
+
+  renderer.render(scene, camera);
+  updateCalibration();
+  await sleep(10); // Allow 10ms for UI updates
+  await finishDrawing();
+  await render();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!('serial' in navigator)) {
+    alert('Sorry, Web Serial is not supported on this device. Make sure you\'re running Chrome 78 or later and have enabled the #enable-experimental-web-platform-features flag in chrome://flags');
+    return;
+  }
+
+  if (!isWebGLAvailable()) {
+    alert('Sorry, WebGL is not supported on this device.');
+    return;
+  }
+
+  butConnect.addEventListener('click', clickConnect);
+  butClear.addEventListener('click', clickClear);
+  autoscroll.addEventListener('click', clickAutoscroll);
+  showTimestamp.addEventListener('click', clickTimestamp);
+  baudRate.addEventListener('change', changeBaudRate);
+  angleType.addEventListener('change', changeAngleType);
+  darkMode.addEventListener('click', clickDarkMode);
+
+  const notSupported = document.getElementById('notSupported');
+  notSupported.classList.add('hidden');
+
+  const webGLnotSupported = document.getElementById('webGLnotSupported');
+  webGLnotSupported.classList.add('hidden');
+
+  initBaudRate();
+  loadAllSettings();
+  updateTheme();
+  await finishDrawing();
+  await render();
+});
+
+function isWebGLAvailable() {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+  } catch (e) {
+    return false;
+  }
+}
+
+function updateCalibration() {
+  // Update the Calibration Container with the values from calibration
+  const calMap = [
+    {caption: "Uncalibrated",         color: "#CC0000"},
+    {caption: "Partially Calibrated", color: "#FF6600"},
+    {caption: "Mostly Calibrated",    color: "#FFCC00"},
+    {caption: "Fully Calibrated",     color: "#009900"},
+  ];
+  const calLabels = [
+    "System", "Gyro", "Accelerometer", "Magnetometer"
+  ];
+
+  calContainer.innerHTML = "";
+  for (let i = 0; i < calibration.length; i++) {
+    const calInfo = calMap[calibration[i]];
+    const element = document.createElement("div");
+    element.innerHTML = calLabels[i] + ": " + calInfo.caption;
+    element.style = "color: " + calInfo.color;
+    calContainer.appendChild(element);
+  }
+}
+
+/*
+let bunny1, bunny2;
+
+const renderer = new THREE.WebGLRenderer({canvas});
+
+const camera = new THREE.PerspectiveCamera(45, canvas.width/canvas.height, 0.1, 100);
+camera.position.set(0, 0, 30);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('black');
+
+{
+  const skyColor = 0xB1E1FF;  // light blue
+  const groundColor = 0x666666;  // black
+  const intensity = 0.5;
+  const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+  scene.add(light);
+}
+
+{
+  const color = 0xFFFFFF;
+  const intensity = 1;
+  const light = new THREE.DirectionalLight(color, intensity);
+  light.position.set(0, 10, 0);
+  light.target.position.set(-5, 0, 0);
+  scene.add(light);
+  scene.add(light.target);
+}
+
+{
+  const objLoader = new OBJLoader();
+  objLoader.load('assets/bunny.obj', (root) => {
+    bunny1 = root.clone();
+    bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
+    scene.add(bunny1);
+
+    bunny2 = root.clone();
+    bunny2.position.set(15, 0, 0); // Set bunny2 to the right
+    scene.add(bunny2);
+  });
+}
+
+let orientation1 = [0, 0, 0];
+let quaternion1 = [1, 0, 0, 0];
+let orientation2 = [0, 0, 0];
+let quaternion2 = [1, 0, 0, 0];
+
+function resizeRendererToDisplaySize(renderer) {
+  const canvas = renderer.domElement;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  const needResize = canvas.width !== width || canvas.height !== height;
+  if (needResize) {
+    renderer.setSize(width, height, false);
+  }
+  return needResize;
+}
+
+async function readLoop() {
+  while (true) {
+    const {value, done} = await reader.read();
+    if (value) {
       let sensorType, sensorData;
       if (value.startsWith("Sensor 1 Orientation:")) {
         sensorType = 1;
