@@ -1,16 +1,4 @@
-// let the editor know that `Chart` is defined by some code
-// included in another file (in this case, `index.html`)
-// Note: the code will still work without this line, but without it you
-// will see an error in the editor
-/* global THREE */
-/* global TransformStream */
-/* global TextEncoderStream */
-/* global TextDecoderStream */
-'use strict';
-
-import * as THREE from 'three';
-import {OBJLoader} from 'objloader';
-
+let bunny1, bunny2;
 let port;
 let reader;
 let inputDone;
@@ -19,13 +7,14 @@ let inputStream;
 let outputStream;
 let showCalibration = false;
 
-let orientation = [0, 0, 0];
-let quaternion = [1, 0, 0, 0];
-let calibration = [0, 0, 0, 0];
+let orientation1 = [0, 0, 0];
+let quaternion1 = [1, 0, 0, 0];
+let orientation2 = [0, 0, 0];
+let quaternion2 = [1, 0, 0, 0];
 
 const maxLogLength = 100;
-/*const baudRates = [300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 74880, 115200, 230400, 250000, 500000, 1000000, 2000000];*/
 const baudRates = [300, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 74880, 115200, 230400];
+
 const log = document.getElementById('log');
 const butConnect = document.getElementById('butConnect');
 const butClear = document.getElementById('butClear');
@@ -52,6 +41,16 @@ function fitToContainer(canvas){
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!('serial' in navigator)) {
+    alert('Sorry, Web Serial is not supported on this device. Make sure you\'re running Chrome 78 or later and have enabled the #enable-experimental-web-platform-features flag in chrome://flags');
+    return;
+  }
+
+  if (!isWebGLAvailable()) {
+    alert('Sorry, WebGL is not supported on this device.');
+    return;
+  }
+
   butConnect.addEventListener('click', clickConnect);
   butClear.addEventListener('click', clickClear);
   autoscroll.addEventListener('click', clickAutoscroll);
@@ -60,32 +59,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   angleType.addEventListener('change', changeAngleType);
   darkMode.addEventListener('click', clickDarkMode);
 
-  if ('serial' in navigator) {
-    const notSupported = document.getElementById('notSupported');
-    notSupported.classList.add('hidden');
-  }
-
-  if (isWebGLAvailable()) {
-    const webGLnotSupported = document.getElementById('webGLnotSupported');
-    webGLnotSupported.classList.add('hidden');
-  }
-
   initBaudRate();
   loadAllSettings();
   updateTheme();
   await finishDrawing();
-  await render();
+  requestAnimationFrame(render);
 });
 
-/**
- * @name connect
- * Opens a Web Serial connection to a micro:bit and sets up the input and
- * output stream.
- */
+function isWebGLAvailable() {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+  } catch (e) {
+    return false;
+  }
+}
+
 async function connect() {
   // - Request a port and open a connection.
   port = await navigator.serial.requestPort();
-  // - Wait for the port to open.toggleUIConnected
+  // - Wait for the port to open.
   await port.open({ baudRate: baudRate.value });
 
   let decoder = new TextDecoderStream();
@@ -100,10 +93,6 @@ async function connect() {
   });
 }
 
-/**
- * @name disconnect
- * Closes the Web Serial connection.
- */
 async function disconnect() {
   if (reader) {
     await reader.cancel();
@@ -124,27 +113,18 @@ async function disconnect() {
   showCalibration = false;
 }
 
-/**
- * @name readLoop
- * Reads data from the input stream and displays it on screen.
- */
 async function readLoop() {
   while (true) {
     const {value, done} = await reader.read();
     if (value) {
-      let plotdata;
-      if (value.substr(0, 12) == "Orientation:") {
-        orientation = value.substr(12).trim().split(",").map(x=>+x);
-      }
-      if (value.substr(0, 11) == "Quaternion:") {
-        quaternion = value.substr(11).trim().split(",").map(x=>+x);
-      }
-      if (value.substr(0, 12) == "Calibration:") {
-        calibration = value.substr(12).trim().split(",").map(x=>+x);
-        if (!showCalibration) {
-          showCalibration = true;
-          updateTheme();
-        }
+      if (value.startsWith("Sensor 1 Orientation:")) {
+        orientation1 = value.substr(21).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 2 Orientation:")) {
+        orientation2 = value.substr(21).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 1 Quaternion:")) {
+        quaternion1 = value.substr(20).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 2 Quaternion:")) {
+        quaternion2 = value.substr(20).trim().split(",").map(x => +x);
       }
     }
     if (done) {
@@ -164,7 +144,7 @@ function logData(line) {
     log.innerHTML += '<span class="timestamp">' + timestamp + ' -> </span>';
     d = null;
   }
-  log.innerHTML += line+ "<br>";
+  log.innerHTML += line + "<br>";
 
   // Remove old log content
   if (log.textContent.split("\n").length > maxLogLength + 1) {
@@ -177,10 +157,6 @@ function logData(line) {
   }
 }
 
-/**
- * @name updateTheme
- * Sets the theme to  Adafruit (dark) mode. Can be refactored later for more themes
- */
 function updateTheme() {
   // Disable all themes
   document
@@ -206,20 +182,11 @@ function enableStyleSheet(node, enabled) {
   node.disabled = !enabled;
 }
 
-
-/**
- * @name reset
- * Reset the Plotter, Log, and associated data
- */
-async function reset() {
+function reset() {
   // Clear the data
   log.innerHTML = "";
 }
 
-/**
- * @name clickConnect
- * Click handler for the connect/disconnect button.
- */
 async function clickConnect() {
   if (port) {
     await disconnect();
@@ -234,97 +201,33 @@ async function clickConnect() {
   toggleUIConnected(true);
 }
 
-/**
- * @name clickAutoscroll
- * Change handler for the Autoscroll checkbox.
- */
 async function clickAutoscroll() {
   saveSetting('autoscroll', autoscroll.checked);
 }
 
-/**
- * @name clickTimestamp
- * Change handler for the Show Timestamp checkbox.
- */
 async function clickTimestamp() {
   saveSetting('timestamp', showTimestamp.checked);
 }
 
-/**
- * @name changeBaudRate
- * Change handler for the Baud Rate selector.
- */
 async function changeBaudRate() {
   saveSetting('baudrate', baudRate.value);
 }
 
-
-/**
- * @name changeAngleType
- * Change handler for the Baud Rate selector.
- */
 async function changeAngleType() {
   saveSetting('angletype', angleType.value);
 }
 
-/**
- * @name clickDarkMode
- * Change handler for the Dark Mode checkbox.
- */
 async function clickDarkMode() {
   updateTheme();
   saveSetting('darkmode', darkMode.checked);
 }
 
-/**
- * @name clickClear
- * Click handler for the clear button.
- */
 async function clickClear() {
   reset();
 }
 
 async function finishDrawing() {
   return new Promise(requestAnimationFrame);
-}
-
-async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * @name LineBreakTransformer
- * TransformStream to parse the stream into lines.
- */
-class LineBreakTransformer {
-  constructor() {
-    // A container for holding stream data until a new line.
-    this.container = '';
-  }
-
-  transform(chunk, controller) {
-    this.container += chunk;
-    const lines = this.container.split('\n');
-    this.container = lines.pop();
-    lines.forEach(line => {
-      controller.enqueue(line)
-      logData(line);
-    });
-  }
-
-  flush(controller) {
-    controller.enqueue(this.container);
-  }
-}
-
-function convertJSON(chunk) {
-  try {
-    let jsonObj = JSON.parse(chunk);
-    jsonObj._raw = chunk;
-    return jsonObj;
-  } catch (e) {
-    return chunk;
-  }
 }
 
 function toggleUIConnected(connected) {
@@ -363,87 +266,6 @@ function loadSetting(setting, defaultValue) {
   return value;
 }
 
-let isWebGLAvailable = function() {
-  try {
-    var canvas = document.createElement( 'canvas' );
-    return !! (window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
-  } catch (e) {
-    return false;
-  }
-}
-
-
-function updateCalibration() {
-  // Update the Calibration Container with the values from calibration
-  const calMap = [
-    {caption: "Uncalibrated",         color: "#CC0000"},
-    {caption: "Partially Calibrated", color: "#FF6600"},
-    {caption: "Mostly Calibrated",    color: "#FFCC00"},
-    {caption: "Fully Calibrated",     color: "#009900"},
-  ];
-  const calLabels = [
-    "System", "Gyro", "Accelerometer", "Magnetometer"
-  ]
-
-  calContainer.innerHTML = "";
-  for (var i = 0; i < calibration.length; i++) {
-    let calInfo = calMap[calibration[i]];
-    let element = document.createElement("div");
-    element.innerHTML = calLabels[i] + ": " + calInfo.caption;
-    element.style = "color: " + calInfo.color;
-    calContainer.appendChild(element);
-  }
-}
-
-function saveSetting(setting, value) {
-  window.localStorage.setItem(setting, JSON.stringify(value));
-}
-let bunny1, bunny2;
-
-const renderer = new THREE.WebGLRenderer({canvas});
-
-const camera = new THREE.PerspectiveCamera(45, canvas.width/canvas.height, 0.1, 100);
-camera.position.set(0, 0, 30);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('black');
-
-{
-  const skyColor = 0xB1E1FF;  // light blue
-  const groundColor = 0x666666;  // black
-  const intensity = 0.5;
-  const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
-  scene.add(light);
-}
-
-{
-  const color = 0xFFFFFF;
-  const intensity = 1;
-  const light = new THREE.DirectionalLight(color, intensity);
-  light.position.set(0, 10, 0);
-  light.target.position.set(-5, 0, 0);
-  scene.add(light);
-  scene.add(light.target);
-}
-
-{
-  const objLoader = new OBJLoader();
-  objLoader.load('assets/bunny.obj', (root) => {
-    bunny1 = root.clone();
-    bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
-    scene.add(bunny1);
-
-    bunny2 = root.clone();
-    bunny2.position.set(15, 0, 0); // Set bunny2 to the right
-    scene.add(bunny2);
-  });
-}
-
-let orientation1 = [0, 0, 0];
-let quaternion1 = [1, 0, 0, 0];
-let orientation2 = [0, 0, 0];
-let quaternion2 = [1, 0, 0, 0];
-
 function resizeRendererToDisplaySize(renderer) {
   const canvas = renderer.domElement;
   const width = canvas.clientWidth;
@@ -453,214 +275,6 @@ function resizeRendererToDisplaySize(renderer) {
     renderer.setSize(width, height, false);
   }
   return needResize;
-}
-
-async function readLoop() {
-  while (true) {
-    const {value, done} = await reader.read();
-    if (value) {
-      if (value.startsWith("Sensor 1 Orientation:")) {
-        orientation1 = value.substr(21).trim().split(",").map(x => +x);
-      } else if (value.startsWith("Sensor 2 Orientation:")) {
-        orientation2 = value.substr(21).trim().split(",").map(x => +x);
-      } else if (value.startsWith("Sensor 1 Quaternion:")) {
-        quaternion1 = value.substr(20).trim().split(",").map(x => +x);
-      } else if (value.startsWith("Sensor 2 Quaternion:")) {
-        quaternion2 = value.substr(20).trim().split(",").map(x => +x);
-      }
-    }
-    if (done) {
-      console.log('[readLoop] DONE', done);
-      reader.releaseLock();
-      break;
-    }
-  }
-}
-
-async function render() {
-  if (resizeRendererToDisplaySize(renderer)) {
-    const canvas = renderer.domElement;
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
-  }
-
-  if (bunny1 && bunny2) {
-    if (angleType.value == "euler") {
-      // Sensor 1
-      let rotationEuler1 = new THREE.Euler(
-        THREE.MathUtils.degToRad(360 - orientation1[2]),
-        THREE.MathUtils.degToRad(orientation1[0]),
-        THREE.MathUtils.degToRad(orientation1[1]),
-        'YZX'
-      );
-      bunny1.setRotationFromEuler(rotationEuler1);
-
-      // Sensor 2
-      let rotationEuler2 = new THREE.Euler(
-        THREE.MathUtils.degToRad(360 - orientation2[2]),
-        THREE.MathUtils.degToRad(orientation2[0]),
-        THREE.MathUtils.degToRad(orientation2[1]),
-        'YZX'
-      );
-      bunny2.setRotationFromEuler(rotationEuler2);
-    } else {
-      // Sensor 1
-      let rotationQuaternion1 = new THREE.Quaternion(quaternion1[1], quaternion1[3], -quaternion1[2], quaternion1[0]);
-      bunny1.setRotationFromQuaternion(rotationQuaternion1);
-
-      // Sensor 2
-      let rotationQuaternion2 = new THREE.Quaternion(quaternion2[1], quaternion2[3], -quaternion2[2], quaternion2[0]);
-      bunny2.setRotationFromQuaternion(rotationQuaternion2);
-    }
-  }
-
-  renderer.render(scene, camera);
-  updateCalibration();
-  await sleep(10); // Allow 10ms for UI updates
-  await finishDrawing();
-  await render();
-}
-
-document.addEventListener('DOMContentLoaded', async () => {
-  if (!('serial' in navigator)) {
-    alert('Sorry, Web Serial is not supported on this device. Make sure you\'re running Chrome 78 or later and have enabled the #enable-experimental-web-platform-features flag in chrome://flags');
-    return;
-  }
-
-  if (!isWebGLAvailable()) {
-    alert('Sorry, WebGL is not supported on this device.');
-    return;
-  }
-
-  butConnect.addEventListener('click', clickConnect);
-  butClear.addEventListener('click', clickClear);
-  autoscroll.addEventListener('click', clickAutoscroll);
-  showTimestamp.addEventListener('click', clickTimestamp);
-  baudRate.addEventListener('change', changeBaudRate);
-  angleType.addEventListener('change', changeAngleType);
-  darkMode.addEventListener('click', clickDarkMode);
-
-  const notSupported = document.getElementById('notSupported');
-  notSupported.classList.add('hidden');
-
-  const webGLnotSupported = document.getElementById('webGLnotSupported');
-  webGLnotSupported.classList.add('hidden');
-
-  initBaudRate();
-  loadAllSettings();
-  updateTheme();
-  await finishDrawing();
-  await render();
-});
-
-function isWebGLAvailable() {
-  try {
-    const canvas = document.createElement('canvas');
-    return !!window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-  } catch (e) {
-    return false;
-  }
-}
-
-function updateCalibration() {
-  // Update the Calibration Container with the values from calibration
-  const calMap = [
-    {caption: "Uncalibrated",         color: "#CC0000"},
-    {caption: "Partially Calibrated", color: "#FF6600"},
-    {caption: "Mostly Calibrated",    color: "#FFCC00"},
-    {caption: "Fully Calibrated",     color: "#009900"},
-  ];
-  const calLabels = [
-    "System", "Gyro", "Accelerometer", "Magnetometer"
-  ];
-
-  calContainer.innerHTML = "";
-  for (let i = 0; i < calibration.length; i++) {
-    const calInfo = calMap[calibration[i]];
-    const element = document.createElement("div");
-    element.innerHTML = calLabels[i] + ": " + calInfo.caption;
-    element.style = "color: " + calInfo.color;
-    calContainer.appendChild(element);
-  }
-}
-
-let bunny1, bunny2;
-
-const renderer = new THREE.WebGLRenderer({canvas});
-
-const camera = new THREE.PerspectiveCamera(45, canvas.width/canvas.height, 0.1, 100);
-camera.position.set(0, 0, 30);
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('black');
-
-{
-  const skyColor = 0xB1E1FF;  // light blue
-  const groundColor = 0x666666;  // black
-  const intensity = 0.5;
-  const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
-  scene.add(light);
-}
-
-{
-  const color = 0xFFFFFF;
-  const intensity = 1;
-  const light = new THREE.DirectionalLight(color, intensity);
-  light.position.set(0, 10, 0);
-  light.target.position.set(-5, 0, 0);
-  scene.add(light);
-  scene.add(light.target);
-}
-
-{
-  const objLoader = new OBJLoader();
-  objLoader.load('assets/bunny.obj', (root) => {
-    bunny1 = root.clone();
-    bunny1.position.set(-15, 0, 0); // Set bunny1 to the left
-    scene.add(bunny1);
-
-    bunny2 = root.clone();
-    bunny2.position.set(15, 0, 0); // Set bunny2 to the right
-    scene.add(bunny2);
-  });
-}
-
-let orientation1 = [0, 0, 0];
-let quaternion1 = [1, 0, 0, 0];
-let orientation2 = [0, 0, 0];
-let quaternion2 = [1, 0, 0, 0];
-
-function resizeRendererToDisplaySize(renderer) {
-  const canvas = renderer.domElement;
-  const width = canvas.clientWidth;
-  const height = canvas.clientHeight;
-  const needResize = canvas.width !== width || canvas.height !== height;
-  if (needResize) {
-    renderer.setSize(width, height, false);
-  }
-  return needResize;
-}
-
-async function readLoop() {
-  while (true) {
-    const {value, done} = await reader.read();
-    if (value) {
-      if (value.startsWith("Sensor 1 Orientation:")) {
-        orientation1 = value.substr(21).trim().split(",").map(x => +x);
-      } else if (value.startsWith("Sensor 2 Orientation:")) {
-        orientation2 = value.substr(21).trim().split(",").map(x => +x);
-      } else if (value.startsWith("Sensor 1 Quaternion:")) {
-        quaternion1 = value.substr(20).trim().split(",").map(x => +x);
-      } else if (value.startsWith("Sensor 2 Quaternion:")) {
-        quaternion2 = value.substr(20).trim().split(",").map(x => +x);
-      }
-    }
-    if (done) {
-      console.log('[readLoop] DONE', done);
-      reader.releaseLock();
-      break;
-    }
-  }
 }
 
 async function render() {
@@ -705,38 +319,23 @@ async function render() {
   requestAnimationFrame(render);
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-  if (!('serial' in navigator)) {
-    alert('Sorry, Web Serial is not supported on this device. Make sure you\'re running Chrome 78 or later and have enabled the #enable-experimental-web-platform-features flag in chrome://flags');
-    return;
+class LineBreakTransformer {
+  constructor() {
+    this.container = '';
   }
 
-  if (!isWebGLAvailable()) {
-    alert('Sorry, WebGL is not supported on this device.');
-    return;
+  transform(chunk, controller) {
+    this.container += chunk;
+    const lines = this.container.split('\n');
+    this.container = lines.pop();
+    lines.forEach(line => {
+      controller.enqueue(line);
+      logData(line);
+    });
   }
 
-  butConnect.addEventListener('click', clickConnect);
-  butClear.addEventListener('click', clickClear);
-  autoscroll.addEventListener('click', clickAutoscroll);
-  showTimestamp.addEventListener('click', clickTimestamp);
-  baudRate.addEventListener('change', changeBaudRate);
-  angleType.addEventListener('change', changeAngleType);
-  darkMode.addEventListener('click', clickDarkMode);
-
-  initBaudRate();
-  loadAllSettings();
-  updateTheme();
-  await finishDrawing();
-  requestAnimationFrame(render);
-});
-
-function isWebGLAvailable() {
-  try {
-    const canvas = document.createElement('canvas');
-    return !!window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-  } catch (e) {
-    return false;
+  flush(controller) {
+    controller.enqueue(this.container);
   }
 }
 
