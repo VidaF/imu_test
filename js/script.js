@@ -51,21 +51,6 @@ function fitToContainer(canvas){
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    if (!isWebGLAvailable()) {
-      alert('Sorry, WebGL is not supported on this device.');
-      return;
-    }
-
-    // Start the rendering loop
-    requestAnimationFrame(render);
-  } catch (error) {
-    console.error('Error during DOMContentLoaded:', error);
-  }
-});
-
-/*
-document.addEventListener('DOMContentLoaded', async () => {
   butConnect.addEventListener('click', clickConnect);
   butClear.addEventListener('click', clickClear);
   autoscroll.addEventListener('click', clickAutoscroll);
@@ -90,7 +75,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await finishDrawing();
   await render();
 });
-*/
 /**
  * @name connect
  * Opens a Web Serial connection to a micro:bit and sets up the input and
