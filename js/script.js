@@ -64,9 +64,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     notSupported.classList.add('hidden');
   }
 
-  if (isWebGLAvailable()) {
+ /* if (isWebGLAvailable()) {
     const webGLnotSupported = document.getElementById('webGLnotSupported');
     webGLnotSupported.classList.add('hidden');
+*/
+    try {
+    if (!isWebGLAvailable()) {
+      alert('Sorry, WebGL is not supported on this device.');
+      return;
+    }
+
+    // Start the rendering loop
+    requestAnimationFrame(render);
+  } catch (error) {
+    console.error('Error during DOMContentLoaded:', error);
+  }
   }
 
   initBaudRate();
