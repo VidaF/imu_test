@@ -1,5 +1,5 @@
-// let the editor know that Chart is defined by some code
-// included in another file (in this case, index.html)
+// let the editor know that `Chart` is defined by some code
+// included in another file (in this case, `index.html`)
 // Note: the code will still work without this line, but without it you
 // will see an error in the editor
 /* global THREE */
@@ -64,21 +64,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     notSupported.classList.add('hidden');
   }
 
- /* if (isWebGLAvailable()) {
+  if (isWebGLAvailable()) {
     const webGLnotSupported = document.getElementById('webGLnotSupported');
     webGLnotSupported.classList.add('hidden');
-*/
-    try {
-    if (!isWebGLAvailable()) {
-      alert('Sorry, WebGL is not supported on this device.');
-      return;
-    }
-
-    // Start the rendering loop
-    requestAnimationFrame(render);
-  } catch (error) {
-    console.error('Error during DOMContentLoaded:', error);
-  }
   }
 
   initBaudRate();
@@ -87,6 +75,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await finishDrawing();
   await render();
 });
+
 /**
  * @name connect
  * Opens a Web Serial connection to a micro:bit and sets up the input and
@@ -169,8 +158,8 @@ function logData(line) {
   // Update the Log
   if (showTimestamp.checked) {
     let d = new Date();
-    let timestamp = d.getHours() + ":" + ${d.getMinutes()}.padStart(2, 0) + ":" +
-        ${d.getSeconds()}.padStart(2, 0) + "." + ${d.getMilliseconds()}.padStart(3, 0);
+    let timestamp = d.getHours() + ":" + `${d.getMinutes()}`.padStart(2, 0) + ":" +
+        `${d.getSeconds()}`.padStart(2, 0) + "." + `${d.getMilliseconds()}`.padStart(3, 0);
     log.innerHTML += '<span class="timestamp">' + timestamp + ' -> </span>';
     d = null;
   }
@@ -372,7 +361,7 @@ function loadSetting(setting, defaultValue) {
 
   return value;
 }
-/*
+
 let isWebGLAvailable = function() {
   try {
     var canvas = document.createElement( 'canvas' );
@@ -381,15 +370,7 @@ let isWebGLAvailable = function() {
     return false;
   }
 }
-*/
-function isWebGLAvailable() {
-  try {
-    const canvas = document.createElement('canvas');
-    return !!window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-  } catch (e) {
-    return false;
-  }
-}
+
 
 function updateCalibration() {
   // Update the Calibration Container with the values from calibration
@@ -443,19 +424,7 @@ scene.background = new THREE.Color('black');
   scene.add(light);
   scene.add(light.target);
 }
-// Inside the objLoader load function, add error handling
-const objLoader = new OBJLoader();
-objLoader.load('assets/bunny.obj', 
-  (root) => {
-    bunny = root;
-    scene.add(bunny);
-  },
-  undefined,
-  (error) => {
-    console.error('Error loading the bunny model:', error);
-  }
-);
-/*
+
 {
   const objLoader = new OBJLoader();
   objLoader.load('assets/bunny.obj', (root) => {
@@ -463,7 +432,7 @@ objLoader.load('assets/bunny.obj',
     scene.add(root);
   });
 }
-*/
+
 function resizeRendererToDisplaySize(renderer) {
   const canvas = renderer.domElement;
   const width = canvas.clientWidth;
