@@ -130,6 +130,7 @@ async function disconnect() {
 async function readLoop() {
   while (true) {
     const {value, done} = await reader.read();
+    /*
     if (value) {
       let plotdata;
       if (value.substr(0, 12) == "Orientation:") {
@@ -140,6 +141,22 @@ async function readLoop() {
       }
       if (value.substr(0, 12) == "Calibration:") {
         calibration = value.substr(12).trim().split(",").map(x=>+x);
+        if (!showCalibration) {
+          showCalibration = true;
+          updateTheme();
+        }
+      }
+    }
+    */
+    if (value) {
+      if (value.startsWith("Sensor 1 Orientation:")) {
+        orientation = value.substr(21).trim().split(",").map(x => +x);
+      }
+      if (value.startsWith("Sensor 1 Quaternion:")) {
+        quaternion = value.substr(20).trim().split(",").map(x => +x);
+      }
+      if (value.startsWith("Sensor 1 Calibration:")) {
+        calibration = value.substr(21).trim().split(",").map(x => +x);
         if (!showCalibration) {
           showCalibration = true;
           updateTheme();
