@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     console.error('Error during DOMContentLoaded:', error);
   }
-  }
+  
 
   initBaudRate();
   loadAllSettings();
