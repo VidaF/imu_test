@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  /* if (isWebGLAvailable()) {
     const webGLnotSupported = document.getElementById('webGLnotSupported');
     webGLnotSupported.classList.add('hidden');
+    }
 */
     try {
     if (!isWebGLAvailable()) {
@@ -138,7 +139,7 @@ async function disconnect() {
  * @name readLoop
  * Reads data from the input stream and displays it on screen.
  */
-/*
+
 async function readLoop() {
   while (true) {
     const {value, done} = await reader.read();
@@ -165,7 +166,8 @@ async function readLoop() {
     }
   }
 }
-*/
+
+/*
 async function readLoop() {
   while (true) {
     const { value, done } = await reader.read();
@@ -191,7 +193,7 @@ async function readLoop() {
     }
   }
 }
-
+*/
 function logData(line) {
   // Update the Log
   if (showTimestamp.checked) {
