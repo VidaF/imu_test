@@ -138,6 +138,7 @@ async function disconnect() {
  * @name readLoop
  * Reads data from the input stream and displays it on screen.
  */
+/*
 async function readLoop() {
   while (true) {
     const {value, done} = await reader.read();
@@ -151,6 +152,32 @@ async function readLoop() {
       }
       if (value.substr(0, 12) == "Calibration:") {
         calibration = value.substr(12).trim().split(",").map(x=>+x);
+        if (!showCalibration) {
+          showCalibration = true;
+          updateTheme();
+        }
+      }
+    }
+    if (done) {
+      console.log('[readLoop] DONE', done);
+      reader.releaseLock();
+      break;
+    }
+  }
+}
+*/
+async function readLoop() {
+  while (true) {
+    const { value, done } = await reader.read();
+    if (value) {
+      if (value.startsWith("Sensor 1 Orientation:")) {
+        orientation = value.substr(21).trim().split(",").map(x => +x);
+      }
+      if (value.startsWith("Sensor 1 Quaternion:")) {
+        quaternion = value.substr(20).trim().split(",").map(x => +x);
+      }
+      if (value.startsWith("Sensor 1 Calibration:")) {
+        calibration = value.substr(21).trim().split(",").map(x => +x);
         if (!showCalibration) {
           showCalibration = true;
           updateTheme();
