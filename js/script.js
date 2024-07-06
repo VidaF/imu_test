@@ -439,6 +439,7 @@ function saveSetting(setting, value) {
 }
 
 let bunny;
+let bunny1, bunny2;
 
 const renderer = new THREE.WebGLRenderer({canvas});
 
@@ -465,12 +466,31 @@ scene.background = new THREE.Color('black');
   scene.add(light.target);
 }
 
-{
+{/*
   const objLoader = new OBJLoader();
   objLoader.load('assets/bunny.obj', (root) => {
     bunny = root;
     scene.add(root);
-  });
+  });*/
+  const objLoader = new OBJLoader();
+  objLoader.load('assets/bunny.obj', 
+  (root) => {
+    // Load the first bunny and position it on the left
+    bunny1 = root.clone();
+    bunny1.position.set(-10, 0, 0);
+    scene.add(bunny1);
+
+    // Load the second bunny and position it on the right
+    bunny2 = root.clone();
+    bunny2.position.set(10, 0, 0);
+    scene.add(bunny2);
+  },
+  undefined,
+  (error) => {
+    console.error('Error loading the bunny model:', error);
+  }
+);
+
 }
 
 function resizeRendererToDisplaySize(renderer) {
