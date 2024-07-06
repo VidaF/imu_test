@@ -1,5 +1,5 @@
-// let the editor know that `Chart` is defined by some code
-// included in another file (in this case, `index.html`)
+// let the editor know that Chart is defined by some code
+// included in another file (in this case, index.html)
 // Note: the code will still work without this line, but without it you
 // will see an error in the editor
 /* global THREE */
@@ -67,7 +67,6 @@ document.addEventListener('DOMContentLoaded', async () => {
  /* if (isWebGLAvailable()) {
     const webGLnotSupported = document.getElementById('webGLnotSupported');
     webGLnotSupported.classList.add('hidden');
-    }
 */
     try {
     if (!isWebGLAvailable()) {
@@ -80,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     console.error('Error during DOMContentLoaded:', error);
   }
-  
+  }
 
   initBaudRate();
   loadAllSettings();
@@ -139,7 +138,6 @@ async function disconnect() {
  * @name readLoop
  * Reads data from the input stream and displays it on screen.
  */
-
 async function readLoop() {
   while (true) {
     const {value, done} = await reader.read();
@@ -167,39 +165,12 @@ async function readLoop() {
   }
 }
 
-/*
-async function readLoop() {
-  while (true) {
-    const { value, done } = await reader.read();
-    if (value) {
-      if (value.startsWith("Sensor 1 Orientation:")) {
-        orientation = value.substr(21).trim().split(",").map(x => +x);
-      }
-      if (value.startsWith("Sensor 1 Quaternion:")) {
-        quaternion = value.substr(20).trim().split(",").map(x => +x);
-      }
-      if (value.startsWith("Sensor 1 Calibration:")) {
-        calibration = value.substr(21).trim().split(",").map(x => +x);
-        if (!showCalibration) {
-          showCalibration = true;
-          updateTheme();
-        }
-      }
-    }
-    if (done) {
-      console.log('[readLoop] DONE', done);
-      reader.releaseLock();
-      break;
-    }
-  }
-}
-*/
 function logData(line) {
   // Update the Log
   if (showTimestamp.checked) {
     let d = new Date();
-    let timestamp = d.getHours() + ":" + `${d.getMinutes()}`.padStart(2, 0) + ":" +
-        `${d.getSeconds()}`.padStart(2, 0) + "." + `${d.getMilliseconds()}`.padStart(3, 0);
+    let timestamp = d.getHours() + ":" + ${d.getMinutes()}.padStart(2, 0) + ":" +
+        ${d.getSeconds()}.padStart(2, 0) + "." + ${d.getMilliseconds()}.padStart(3, 0);
     log.innerHTML += '<span class="timestamp">' + timestamp + ' -> </span>';
     d = null;
   }
