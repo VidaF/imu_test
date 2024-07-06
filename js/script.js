@@ -466,7 +466,8 @@ scene.background = new THREE.Color('black');
   scene.add(light.target);
 }
 
-{/*
+{
+  /*
   const objLoader = new OBJLoader();
   objLoader.load('assets/bunny.obj', (root) => {
     bunny = root;
@@ -503,7 +504,32 @@ function resizeRendererToDisplaySize(renderer) {
   }
   return needResize;
 }
+async function render() {
+  if (resizeRendererToDisplaySize(renderer)) {
+    const canvas = renderer.domElement;
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.updateProjectionMatrix();
+  }
 
+  if (bunny1 != undefined && bunny2 != undefined) {
+    if (angleType.value == "quaternion") {
+      // Sensor 1
+      let rotationQuaternion1 = new THREE.Quaternion(quaternion1[1], quaternion1[3], -quaternion1[2], quaternion1[0]);
+      bunny1.setRotationFromQuaternion(rotationQuaternion1);
+
+      // Sensor 2
+      let rotationQuaternion2 = new THREE.Quaternion(quaternion2[1], quaternion2[3], -quaternion2[2], quaternion2[0]);
+      bunny2.setRotationFromQuaternion(rotationQuaternion2);
+    }
+  }
+
+  renderer.render(scene, camera);
+  updateCalibration();
+  await sleep(10); // Allow 10ms for UI updates
+  requestAnimationFrame(render);
+}
+
+/*
 async function render() {
   if (resizeRendererToDisplaySize(renderer)) {
     const canvas = renderer.domElement;
@@ -543,3 +569,4 @@ async function render() {
   await finishDrawing();
   await render();
 }
+*/
