@@ -127,27 +127,50 @@ async function disconnect() {
  * @name readLoop
  * Reads data from the input stream and displays it on screen.
  */
+let orientation1 = [0, 0, 0];
+let quaternion1 = [1, 0, 0, 0];
+let orientation2 = [0, 0, 0];
+let quaternion2 = [1, 0, 0, 0];
+
 async function readLoop() {
   while (true) {
-    const {value, done} = await reader.read();
-    /*
+    const { value, done } = await reader.read();
     if (value) {
-      let plotdata;
-      if (value.substr(0, 12) == "Orientation:") {
-        orientation = value.substr(12).trim().split(",").map(x=>+x);
-      }
-      if (value.substr(0, 11) == "Quaternion:") {
-        quaternion = value.substr(11).trim().split(",").map(x=>+x);
-      }
-      if (value.substr(0, 12) == "Calibration:") {
-        calibration = value.substr(12).trim().split(",").map(x=>+x);
+      if (value.startsWith("Sensor 1 Orientation:")) {
+        orientation1 = value.substr(21).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 1 Quaternion:")) {
+        quaternion1 = value.substr(20).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 1 Calibration:")) {
+        calibration = value.substr(21).trim().split(",").map(x => +x);
+        if (!showCalibration) {
+          showCalibration = true;
+          updateTheme();
+        }
+      } else if (value.startsWith("Sensor 2 Orientation:")) {
+        orientation2 = value.substr(21).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 2 Quaternion:")) {
+        quaternion2 = value.substr(20).trim().split(",").map(x => +x);
+      } else if (value.startsWith("Sensor 2 Calibration:")) {
+        calibration = value.substr(21).trim().split(",").map(x => +x);
         if (!showCalibration) {
           showCalibration = true;
           updateTheme();
         }
       }
     }
-    */
+    if (done) {
+      console.log('[readLoop] DONE', done);
+      reader.releaseLock();
+      break;
+    }
+  }
+}
+
+/*
+async function readLoop() {
+  while (true) {
+    const {value, done} = await reader.read();
+    
     if (value) {
       if (value.startsWith("Sensor 1 Orientation:")) {
         orientation = value.substr(21).trim().split(",").map(x => +x);
@@ -170,7 +193,7 @@ async function readLoop() {
     }
   }
 }
-
+*/
 function logData(line) {
   // Update the Log
   if (showTimestamp.checked) {
